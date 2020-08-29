@@ -263,9 +263,6 @@ paket-files/
 __pycache__/
 *.pyc
 
-Visual Studio files
-*.sln
-*.csproj
 
 Configuration files
 appSettings.json
