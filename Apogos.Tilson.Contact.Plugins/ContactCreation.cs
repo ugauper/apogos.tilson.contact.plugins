@@ -20,7 +20,7 @@ namespace Apogos.Tilson.Contact.Plugins
 
         public override void Process()
         {
-            var account = new Account(TargetEntity);
+            var contact = new Apogos.Dynamics.Common.Models.Contact(TargetEntity);
 
         }
 

@@ -127,7 +127,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Apogos.Tilson.Contact.Plugins.snk" />
-    <None Include="app.config" />
     <None Include="ILMerge.props" />
     <None Include="packages.config" />
   </ItemGroup>
