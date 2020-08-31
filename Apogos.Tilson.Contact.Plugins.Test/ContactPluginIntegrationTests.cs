@@ -47,10 +47,10 @@ namespace Apogos.Tilson.Contact.Plugins.Test
             _dynamicsConfiguration = configurationRoot.GetSection("Apogos").Get<DynamicsConfiguration>();
             _orgServiceProvider = new OrgServiceProvider();
             _tracingService = new TracingService();
-            _orgService = _orgServiceProvider.GetOrganizationService(_dynamicsConfiguration).Result;
+            /*_orgService = _orgServiceProvider.GetOrganizationService(_dynamicsConfiguration).Result;
             _contactService = new ContactService(_orgService, _tracingService);
             _accountService = new AccountService(_orgService, _tracingService);
-            _advancedWirelessAccount = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
+            _advancedWirelessAccount = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);*/
         }
 
         private void RemovePrimaryContact(Models.Account account)
@@ -60,8 +60,12 @@ namespace Apogos.Tilson.Contact.Plugins.Test
         }
 
         [Fact]
-        public void ShouldSetAccountPrimaryContactIfContactIsPrimary()
+        public async void ShouldSetAccountPrimaryContactIfContactIsPrimary()
         {
+            _orgService = await _orgServiceProvider.GetOrganizationService(_dynamicsConfiguration);
+            var query = new QueryExpression("apogos_incident");
+            var incidents = _orgService.RetrieveMultiple(query).Entities;
+
             var primaryContact = (Models.Contact)_contactService.Get(_primaryContactAdvancedWirelessGuid);
             Assert.Contains(_primaryContactType.ToString(), primaryContact.GetAttributeValue<string>(_contactTypeAttribute));
 
