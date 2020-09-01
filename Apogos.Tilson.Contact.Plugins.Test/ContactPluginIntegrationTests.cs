@@ -9,6 +9,7 @@ using System.IO;
 using Xunit;
 using Apogos.Dynamics.Common.Interfaces;
 using System.Windows.Forms;
+using System.Net;
 
 namespace Apogos.Tilson.Contact.Plugins.Test
 {
@@ -45,12 +46,17 @@ namespace Apogos.Tilson.Contact.Plugins.Test
                 .Build();
 
             _dynamicsConfiguration = configurationRoot.GetSection("Apogos").Get<DynamicsConfiguration>();
+
+            // Manually setting the security protocol to TLS 1.2 because the default setting 1.0 causes a connection error. https://alphabold.com/tls-1-2-and-dynamics-365-connectivity-issues/
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             _orgServiceProvider = new OrgServiceProvider();
             _tracingService = new TracingService();
-            /*_orgService = _orgServiceProvider.GetOrganizationService(_dynamicsConfiguration).Result;
+            _orgService = _orgServiceProvider.GetOrganizationService(_dynamicsConfiguration).Result;
             _contactService = new ContactService(_orgService, _tracingService);
             _accountService = new AccountService(_orgService, _tracingService);
-            _advancedWirelessAccount = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);*/
+            _advancedWirelessAccount = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
+
+            _contactPlugin = new ContactCreation();
         }
 
         private void RemovePrimaryContact(Models.Account account)
@@ -59,15 +65,19 @@ namespace Apogos.Tilson.Contact.Plugins.Test
             _accountService.Update(account);
         }
 
+        private void SetPrimaryContact(Models.Account account)
+        {
+            var contactReference = new EntityReference(new Models.Contact().EntityName,  _primaryContactAdvancedWirelessGuid);
+            account.SetAttribute(_primaryContactIdAttribute, contactReference);
+            _accountService.Update(account);
+        }
+
         [Fact]
         public async void ShouldSetAccountPrimaryContactIfContactIsPrimary()
         {
-            _orgService = await _orgServiceProvider.GetOrganizationService(_dynamicsConfiguration);
-            var query = new QueryExpression("apogos_incident");
-            var incidents = _orgService.RetrieveMultiple(query).Entities;
-
             var primaryContact = (Models.Contact)_contactService.Get(_primaryContactAdvancedWirelessGuid);
-            Assert.Contains(_primaryContactType.ToString(), primaryContact.GetAttributeValue<string>(_contactTypeAttribute));
+            var primaryContactTypeOptionSet = new OptionSetValue(_primaryContactType);
+            Assert.Contains(primaryContactTypeOptionSet, primaryContact.GetAttributeValue<OptionSetValueCollection>(_contactTypeAttribute));
 
             _contactPlugin.TargetEntity = primaryContact.TargetEntity;
             RemovePrimaryContact(_advancedWirelessAccount);
@@ -98,14 +108,14 @@ namespace Apogos.Tilson.Contact.Plugins.Test
             var account = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
             var existingPrimaryContactId = account.GetAttributeValue<Guid>(_primaryContactIdValueAttribute);
 
-            if (existingPrimaryContactId == null)
+            if (existingPrimaryContactId == Guid.Empty)
             {
-                ShouldSetAccountPrimaryContactIfContactIsPrimary();
-                account = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
-                existingPrimaryContactId = account.GetAttributeValue<Guid>(_primaryContactIdValueAttribute);
+                SetPrimaryContact(account);
+                var contact = account.GetAttributeValue<EntityReference>(_primaryContactIdAttribute);
+                existingPrimaryContactId = contact.Id;
             }
 
-            Assert.NotNull(account.GetAttributeValue<Guid?>(_primaryContactIdValueAttribute));
+            //Assert.NotEqual(Guid.Empty, account.GetAttributeValue<Guid>(_primaryContactIdValueAttribute));
 
             var primaryContact = (Models.Contact)_contactService.Get(_secondPrimaryContactAdvancedWirelessGuid);
             _contactPlugin.TargetEntity = primaryContact.TargetEntity;
