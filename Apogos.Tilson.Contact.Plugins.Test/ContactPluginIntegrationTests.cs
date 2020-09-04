@@ -82,7 +82,7 @@ namespace Apogos.Tilson.Contact.Plugins.Test
             RemovePrimaryContact(_advancedWirelessAccount);
             Assert.Null(_advancedWirelessAccount.GetAttribute(_primaryContactIdAttribute));
 
-            _contactPlugin.SetContactAsAccountPrimaryContact(_accountService, _advancedWirelessAccountGuid, primaryContact);
+            _contactPlugin.SetContactAsAccountPrimaryContact(_accountService, primaryContact);
             var account = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
             Assert.Equal(primaryContact.Id, account.GetAttributeValue<EntityReference>(_primaryContactIdAttribute).Id);
         }
@@ -96,7 +96,7 @@ namespace Apogos.Tilson.Contact.Plugins.Test
             RemovePrimaryContact(_advancedWirelessAccount);
             Assert.Null(_advancedWirelessAccount.GetAttribute(_primaryContactIdAttribute));
 
-            _contactPlugin.Process();
+            _contactPlugin.SetContactAsAccountPrimaryContact(_accountService, nonPrimaryContact);
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace Apogos.Tilson.Contact.Plugins.Test
 
             var primaryContact = (Models.Contact)_contactService.Get(_secondPrimaryContactAdvancedWirelessGuid);
             _contactPlugin.TargetEntity = primaryContact.TargetEntity;
-            _contactPlugin.SetContactAsAccountPrimaryContact(_accountService, _advancedWirelessAccountGuid, primaryContact);
+            _contactPlugin.SetContactAsAccountPrimaryContact(_accountService, primaryContact);
 
             var updatedAccount = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
             Assert.Equal(existingPrimaryContact.Id, updatedAccount.GetAttributeValue<EntityReference>(_primaryContactIdAttribute).Id);
@@ -129,7 +129,7 @@ namespace Apogos.Tilson.Contact.Plugins.Test
 
             Assert.Null(noAccountContact.GetAttributeValue<Guid?>(_parentCustomerIdAttribute));
 
-            _contactPlugin.Process();
+            _contactPlugin.SetContactAsAccountPrimaryContact(_accountService, noAccountContact);
         }
     }
 }

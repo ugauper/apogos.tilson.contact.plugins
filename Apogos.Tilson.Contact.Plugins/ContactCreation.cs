@@ -28,6 +28,13 @@ namespace Apogos.Tilson.Contact.Plugins
         public override void Process()
         {
             var contact = new Models.Contact(TargetEntity);
+
+            var accountService = new AccountService(OrgService, TracingService);
+            SetContactAsAccountPrimaryContact(accountService, contact);
+        }
+
+        public void SetContactAsAccountPrimaryContact(IAccountService accountService, Models.Contact contact)
+        {
             var accountReference = contact.GetAttributeValue<EntityReference>(_parentCustomerIdAttribute);
 
             if (accountReference == null) { return; }
@@ -36,15 +43,9 @@ namespace Apogos.Tilson.Contact.Plugins
             var primaryContactTypeOption = new OptionSetValue(_primaryContactType);
 
             if (!contactTypes.Contains(primaryContactTypeOption)) { return; }
-
-            var accountService = new AccountService(OrgService, TracingService);
+            
             var accountId = accountReference.Id;
 
-            SetContactAsAccountPrimaryContact(accountService, accountId, contact);
-        }
-
-        public void SetContactAsAccountPrimaryContact(IAccountService accountService, Guid accountId, Models.Contact contact)
-        {
             var account = (Models.Account)accountService.Get(accountId);
             var existingPrimaryContact = account.GetAttributeValue<EntityReference>(_primaryContactIdAttribute);
 
