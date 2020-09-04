@@ -16,13 +16,12 @@ namespace Apogos.Tilson.Contact.Plugins.Test
     public class ContactPluginIntegrationTests
     {
         private const string _primaryContactIdAttribute = "primarycontactid";
-        private const string _primaryContactIdValueAttribute = "_primarycontactid_value";
         private const string _parentCustomerIdAttribute = "parentcustomerid";
         private const string _contactTypeAttribute = "apogos_contacttype";
         private const int _primaryContactType = 255290001;
         private Guid _primaryContactAdvancedWirelessGuid => new System.Guid("0df81372-a2e8-ea11-a817-000d3a5a1477");
         private Guid _secondPrimaryContactAdvancedWirelessGuid => new System.Guid("55af2b77-9de9-ea11-a817-000d3a5a7103");
-        private Guid _nonPrimaryContactAdvancedWirelessGuid => new System.Guid("55af2b77-9de9-ea11-a817-000d3a5a7103");
+        private Guid _nonPrimaryContactAdvancedWirelessGuid => new System.Guid("9a041a91-9fe9-ea11-a817-000d3a5a7103");
         private Guid _noAccountPrimaryContactGuid => new System.Guid("e9c09756-a0e9-ea11-a817-000d3a5a7103");
         private Guid _advancedWirelessAccountGuid => new System.Guid("9d5dfc9c-68d2-ea11-a819-000d3a5913d3");
         
@@ -73,7 +72,7 @@ namespace Apogos.Tilson.Contact.Plugins.Test
         }
 
         [Fact]
-        public async void ShouldSetAccountPrimaryContactIfContactIsPrimary()
+        public void ShouldSetAccountPrimaryContactIfContactIsPrimary()
         {
             var primaryContact = (Models.Contact)_contactService.Get(_primaryContactAdvancedWirelessGuid);
             var primaryContactTypeOptionSet = new OptionSetValue(_primaryContactType);
@@ -83,13 +82,13 @@ namespace Apogos.Tilson.Contact.Plugins.Test
             RemovePrimaryContact(_advancedWirelessAccount);
             Assert.Null(_advancedWirelessAccount.GetAttribute(_primaryContactIdAttribute));
 
-            _contactPlugin.Process();
+            _contactPlugin.SetContactAsAccountPrimaryContact(_accountService, _advancedWirelessAccountGuid, primaryContact);
             var account = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
-            Assert.Equal(primaryContact.Id, account.GetAttribute(_primaryContactIdValueAttribute));
+            Assert.Equal(primaryContact.Id, account.GetAttributeValue<EntityReference>(_primaryContactIdAttribute).Id);
         }
 
         [Fact]
-        public void ShouldNotSetAccountPrimaryContactIfContactIsNotPrimary()
+        public void ShouldNotThrowIfContactIsNotPrimary()
         {
             var nonPrimaryContact = (Models.Contact)_contactService.Get(_nonPrimaryContactAdvancedWirelessGuid);
             _contactPlugin.TargetEntity = nonPrimaryContact.TargetEntity;
@@ -98,38 +97,28 @@ namespace Apogos.Tilson.Contact.Plugins.Test
             Assert.Null(_advancedWirelessAccount.GetAttribute(_primaryContactIdAttribute));
 
             _contactPlugin.Process();
-            var updatedAccount = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
-            Assert.Null(updatedAccount.GetAttribute(_primaryContactIdValueAttribute));
         }
 
         [Fact]
         public void ShouldNotOverwriteExistingAccountPrimaryContact()
         {
             var account = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
-            var existingPrimaryContactId = account.GetAttributeValue<Guid>(_primaryContactIdValueAttribute);
+            var existingPrimaryContact = account.GetAttributeValue<EntityReference>(_primaryContactIdAttribute);
 
-            if (existingPrimaryContactId == Guid.Empty)
+            if (existingPrimaryContact == null)
             {
                 SetPrimaryContact(account);
-                var contact = account.GetAttributeValue<EntityReference>(_primaryContactIdAttribute);
-                existingPrimaryContactId = contact.Id;
+                existingPrimaryContact = account.GetAttributeValue<EntityReference>(_primaryContactIdAttribute);
             }
 
-            //Assert.NotEqual(Guid.Empty, account.GetAttributeValue<Guid>(_primaryContactIdValueAttribute));
+            Assert.NotNull(account.GetAttributeValue<EntityReference>(_primaryContactIdAttribute));
 
             var primaryContact = (Models.Contact)_contactService.Get(_secondPrimaryContactAdvancedWirelessGuid);
             _contactPlugin.TargetEntity = primaryContact.TargetEntity;
-            _contactPlugin.Process();
+            _contactPlugin.SetContactAsAccountPrimaryContact(_accountService, _advancedWirelessAccountGuid, primaryContact);
+
             var updatedAccount = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
-            Assert.Equal(existingPrimaryContactId, updatedAccount.GetAttributeValue<Guid>(_primaryContactIdValueAttribute));
-
-            Assert.NotNull(account.GetAttributeValue<Guid?>(_primaryContactIdValueAttribute));
-
-            var nonPrimaryContact = (Models.Contact)_contactService.Get(_nonPrimaryContactAdvancedWirelessGuid);
-            _contactPlugin.TargetEntity = nonPrimaryContact.TargetEntity;
-            _contactPlugin.Process();
-            updatedAccount = (Models.Account)_accountService.Get(_advancedWirelessAccountGuid);
-            Assert.Equal(existingPrimaryContactId, updatedAccount.GetAttributeValue<Guid>(_primaryContactIdValueAttribute));
+            Assert.Equal(existingPrimaryContact.Id, updatedAccount.GetAttributeValue<EntityReference>(_primaryContactIdAttribute).Id);
         }
 
         [Fact]
